@@ -1,6 +1,4 @@
-from pyexpat import model
 from huggingface_hub import HfApi
-from pprint import pprint
 import streamlit as st
 
 # Create the instance of the API
@@ -21,7 +19,7 @@ def get_models(tasks="text-classification", sort_by="likes") -> list[dict]:
         filter=tasks,
         sort=sort_by,
         direction=-1,
-        limit=100,
+        limit=10,
     )
     # Store as a list od dicts
     return [
@@ -36,24 +34,18 @@ def get_models(tasks="text-classification", sort_by="likes") -> list[dict]:
 
 
 
+# models_list = get_models(tasks="text-classification", sort_by="downloads")
 
 model_container = st.container()
-col1, col2 = model_container.columns([1,3])
+
 with st.sidebar:
     task = st.selectbox("Choose Tasks", tasks)
-    if st.checkbox("Explorer Models"):
-        key_sort = col1.radio("Sortby", ["downloads", "likes"])
-        limit = col1.slider("limit", min_value=5, max_value=20, value=5, step=1)
+    container_model_selector = st.container()
+    with st.popover("Explorer Models"):
+        key_sort = st.radio("Sortby", ["downloads", "likes", "created_at"])
+        limit = st.slider("Limit to", min_value=5, max_value=20, value=5, step=5)
         # model_container.expander("view models info", icon="ℹ️")
         models_list = get_models(task, sort_by=key_sort)[:limit]
-        col2.dataframe(models_list, use_container_width=True)
-    else:
-        key_sort='downloads'
-        limit = 5
 
-    
-    models_list = sorted(models_list, key=lambda x: x["likes" if key_sort=="downloads" else key_sort], reverse=True)
-
-
-with st.sidebar:
-    st.selectbox("choose Model", [model["id"] for model in models_list])
+    container_model_selector.selectbox("choose Model", [model["id"] for model in models_list])
+st.dataframe(models_list, use_container_width=True)
