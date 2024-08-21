@@ -1,3 +1,4 @@
+from narwhals import col
 import streamlit as st
 from huggingface_hub import HfApi
 import tensorflow as tf
@@ -49,7 +50,7 @@ with st.sidebar:
     task = st.selectbox("Choose Tasks", tasks)
 
         
-with st.expander("Explore Models", expanded=False):
+with st.popover("Explore Models", use_container_width=True):
     col1, col2 = st.columns([1, 3])
     key_sort = col1.radio("Sortby", ["downloads", "likes", "last_modified"])
     limit = col1.slider("Limit to", min_value=5, max_value=20, value=5, step=5)
@@ -67,11 +68,37 @@ with st.form(f"{task}"):
     if st.form_submit_button("Submit"):
         match task:
             case "sentiment-analysis":
+                # prediction
                 pipeline_model = get_model(task, selected_model)
                 output = pipeline_model(input_text)
-                st.success(f"{output[0]['label'].upper()} at {output[0]['score']:.2%}")
-                with st.popover("Show all posibilities"):
-                    st.write(pipeline_model.model.config.id2label)
+                label, score = output[0]['label'].upper(), output[0]['score']
+                # display
+                col_label, col_score, col_rest = st.columns(3, gap='small')
+                col_label.success(label)
+                col_score.metric("Score",value=f"{score:.2%}")
+                col_rest.popover("Show all posibilities").write(pipeline_model.model.config.id2label)
+
+            case "text-classification":
+                # prediction
+                pipeline_model = get_model(task, selected_model)
+                output = pipeline_model(input_text)
+                label, score = output[0]['label'].upper(), output[0]['score']
+                # display
+                col_label, col_score, col_rest = st.columns(3, gap='small')
+                col_label.success(label)
+                col_score.metric("Score",value=f"{score:.2%}")
+                col_rest.popover("Show all posibilities").write(pipeline_model.model.config.id2label)
+
+            case "summarization":
+                # prediction
+                pipeline_model = get_model(task, selected_model)
+                max_length = st.slider("max length", min_value=20, max_value=200, value=50, step=20)
+                output = pipeline_model(input_text, max_length=max_length, clean_up_tokenization_spaces=True)
+                summary_text = output[0]['summary_text']
+                # display
+                st.text_area("the summary", value=summary_text)
+                st.success(f"Success{len(summary_text)}")
+
             case _:
                 st.warning("Not implimented")
 
