@@ -1,5 +1,6 @@
 import streamlit as st
 from huggingface_hub import HfApi
+import tensorflow as tf
 from transformers import pipeline
 
 # Variables
@@ -14,7 +15,7 @@ tasks = [
 ]
 
 
-# Functions
+# region:Functions
 def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
     """
     Returns a list of dictionaries containing model information.
@@ -41,12 +42,13 @@ def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
 def get_model(task: str, model_id: str):
     """Get a model from the Hub by its task and ID."""
     return pipeline(task=task, model=model_id)
+# endregion:Functions
 
-
-# Display Elements
+#region:Display Elements commun elements
 with st.sidebar:
     task = st.selectbox("Choose Tasks", tasks)
 
+        
 with st.expander("Explore Models", expanded=False):
     col1, col2 = st.columns([1, 3])
     key_sort = col1.radio("Sortby", ["downloads", "likes", "last_modified"])
@@ -58,12 +60,22 @@ with st.sidebar:
     selected_model = st.selectbox(
         "Choose Model", [model["id"] for model in models_list]
     )
+#endregion:Display Elements commun elements
 
 with st.form(f"{task}"):
     input_text = st.text_area(f"{task.upper()}")
-    if st.form_submit_button("Analyse"):
-        model = get_model(task, selected_model)
-        output = model(input_text)
-        st.success(f"{output[0]['label'].upper()} at {output[0]['score']:.2%}")
-        with st.popover("Show all posibilities"):
-            st.write(model.model.config.id2label)
+    if st.form_submit_button("Submit"):
+        match task:
+            case "sentiment-analysis":
+                pipeline_model = get_model(task, selected_model)
+                output = pipeline_model(input_text)
+                st.success(f"{output[0]['label'].upper()} at {output[0]['score']:.2%}")
+                with st.popover("Show all posibilities"):
+                    st.write(pipeline_model.model.config.id2label)
+            case _:
+                st.warning("Not implimented")
+
+
+# import torch
+# st.write(torch.cuda.is_available())
+# st.write(tf.test.is_gpu_available(cuda_only=True))
