@@ -11,7 +11,7 @@ tasks = [
     "text-classification",
     "summarization",
     "question-answering",
-    "translation_en_to_fr",
+    "translation",
     "text-generation",
 ]
 
@@ -23,6 +23,7 @@ def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
     """
     models = api.list_models(
         filter=task,
+        search="en_to_fr",
         sort=sort_key,
         direction=-1,
         limit=10,
@@ -119,8 +120,31 @@ with st.form(f"{task}"):
                 st.success(
                     f"Summary Percentage:{len(summary_text.split()) / text_length:.2%}"
                 )
-                st.write(pipeline_model.model.config.min_length)
+                # st.write(pipeline_model.model.config.min_length)
 
+            case "question-answering":
+                # prediction
+                pipeline_model = get_model(task, selected_model)
+                question_text = st.text_input("Put your question here")
+                if len(question_text) > 2:
+                    output = pipeline_model(question=question_text, context=input_text)
+                    answer = output["answer"]
+                    score = output["score"]
+                    # display
+                    col1, col2 = st.columns(2, gap="small")
+                    col1.success(answer)
+                    col2.metric("Score", value=f"{score:.2%}")
+                    
+            case "translation":
+                # prediction
+                pipeline_model = get_model(task, model_id="google-t5/t5-small")
+                output = pipeline_model(
+                    input_text, clean_up_tokenization_spaces=True
+                )
+                translated_text = output[0]["translation_text"]
+                # display
+                st.text_area("Translation:", value=translated_text)
+                            
             case _:
                 st.warning("Not implimented")
 
