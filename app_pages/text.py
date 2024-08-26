@@ -23,7 +23,7 @@ def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
     """
     models = api.list_models(
         filter=task,
-        search="en_to_fr",
+        search="en_to_fr" if task=="translation" else None,
         sort=sort_key,
         direction=-1,
         limit=10,
