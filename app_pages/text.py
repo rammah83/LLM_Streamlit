@@ -3,9 +3,10 @@ import streamlit as st
 from huggingface_hub import HfApi
 import tensorflow as tf
 from transformers import pipeline
+from utils import api
 
 # Variables
-api = HfApi()
+hf_api = HfApi()
 tasks = [
     "sentiment-analysis",
     "text-classification",
@@ -21,9 +22,9 @@ def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
     """
     Returns a list of dictionaries containing model information.
     """
-    models = api.list_models(
+    models = hf_api.list_models(
         filter=task,
-        search="en_to_fr" if task=="translation" else None,
+        search="en_to_fr" if task == "translation" else None,
         sort=sort_key,
         direction=-1,
         limit=10,
@@ -70,16 +71,16 @@ with st.sidebar:
 with st.form(f"{task}"):
     input_text = st.text_area(f"{task.upper()}")
     if task == "summarization":
-        text_length=len(input_text.split())
+        text_length = len(input_text.split())
         if text_length < 30:
             st.warning("Text is too short to be summarized")
         else:
             max_length = st.slider(
-            "max length",
-            min_value=30,
-            max_value=int(2 * text_length),
-            value=int(1 * text_length),
-        )
+                "max length",
+                min_value=30,
+                max_value=int(2 * text_length),
+                value=int(1 * text_length),
+            )
     if st.form_submit_button("Submit"):
         match task:
             case "sentiment-analysis":
@@ -124,27 +125,33 @@ with st.form(f"{task}"):
 
             case "question-answering":
                 # prediction
-                pipeline_model = get_model(task, selected_model)
+                # pipeline_model = get_model(task, selected_model)
                 question_text = st.text_input("Put your question here")
                 if len(question_text) > 2:
-                    output = pipeline_model(question=question_text, context=input_text)
+                    # output = pipeline_model(question=question_text, context=input_text)
+                    output = api.query(
+                        {
+                            "inputs": {
+                                "question": question_text,
+                                "context": input_text,
+                            },
+                        }
+                    )
                     answer = output["answer"]
                     score = output["score"]
                     # display
                     col1, col2 = st.columns(2, gap="small")
                     col1.success(answer)
                     col2.metric("Score", value=f"{score:.2%}")
-                    
+
             case "translation":
                 # prediction
-                pipeline_model = get_model(task, model_id="google-t5/t5-small")
-                output = pipeline_model(
-                    input_text, clean_up_tokenization_spaces=True
-                )
+                # pipeline_model = get_model(task, model_id="google-t5/t5-small")
+                output = pipeline_model(input_text, clean_up_tokenization_spaces=True)
                 translated_text = output[0]["translation_text"]
                 # display
                 st.text_area("Translation:", value=translated_text)
-                            
+
             case _:
                 st.warning("Not implimented")
 

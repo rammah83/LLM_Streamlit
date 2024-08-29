@@ -2,6 +2,7 @@ from functools import lru_cache
 from pprint import pprint
 import requests
 
+
 @lru_cache(maxsize=None)
 def get_API_URL(model_id):
     try:
@@ -13,12 +14,13 @@ def get_API_URL(model_id):
 @lru_cache(maxsize=None)
 def get_headers():
     try:
-        with open('././tokens_key.secret', 'r') as f:
+        with open("././tokens_key.secret", "r") as f:
             return {"Authorization": f"Bearer {f.read()}"}
     except FileNotFoundError:
         print("key file not found")
     except KeyError:
         print("key not found")
+
 
 # API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
 # headers = {f"Authorization": f"Bearer {open("././tokens_key.secret", "r").read()}"}
@@ -33,13 +35,15 @@ def query(payload, model_id="deepset/roberta-base-squad2"):
     except Exception as e:
         print(e)
         return None
-	
-output = query({
-	"inputs": {
-	"question": "What is my name?",
-	"context": "My name is Clara and I live in Berkeley."
-},
-})
+
 
 if __name__ == "__main__":
+    output = query(
+        {
+            "inputs": {
+                "question": "What is my name?",
+                "context": "My name is Clara and I live in Berkeley.",
+            },
+        }
+    )
     pprint(output)
