@@ -1,7 +1,10 @@
 import streamlit as st
 
-st.set_page_config(page_title='Ai Tools', layout='wide')
+st.set_page_config(page_title="Ai Tools", layout="wide")
 st.title("Ai Tools")
+
+with st.sidebar:
+    st.logo(image=r"./res/img/mylogo.jpeg")
 
 pages = {
     "HOME": [st.Page("./app_pages/home.py", title="Home", icon="🏠")],

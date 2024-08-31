@@ -1,7 +1,7 @@
 from narwhals import col
 import streamlit as st
 from huggingface_hub import HfApi
-import tensorflow as tf
+import asyncio
 from transformers import pipeline
 from utils import api
 
@@ -26,6 +26,7 @@ def get_models_list(task="text-classification", sort_key="likes") -> list[dict]:
         filter=task,
         search="en_to_fr" if task == "translation" else None,
         sort=sort_key,
+        language="en",
         direction=-1,
         limit=10,
     )
@@ -52,8 +53,8 @@ def get_model(task: str, model_id: str):
 
 # region:Display Elements commun elements
 with st.sidebar:
-    task = st.selectbox("Choose Tasks", tasks)
-
+    task = st.selectbox("Choose Tasks", tasks, on_change=api.get_API_URL.cache_clear())
+    
 
 with st.popover("Explore Models", use_container_width=True):
     col1, col2 = st.columns([1, 3])
@@ -64,8 +65,11 @@ with st.popover("Explore Models", use_container_width=True):
 
 with st.sidebar:
     selected_model = st.selectbox(
-        "Choose Model", [model["id"] for model in models_list]
+        "Choose Model", [model["id"] for model in models_list],
+        on_change=api.get_API_URL.cache_clear()
     )
+    model_info = hf_api.model_info(r"lxyuan/distilbert-base-multilingual-cased-sentiments-student")
+    st.popover("Model Info").write(model_info.__dict__)
 # endregion:Display Elements commun elements
 
 with st.form(f"{task}"):
@@ -85,17 +89,25 @@ with st.form(f"{task}"):
         match task:
             case "sentiment-analysis":
                 # prediction
-                pipeline_model = get_model(task, selected_model)
-                output = pipeline_model(input_text)
-                label, score = output[0]["label"].upper(), output[0]["score"]
-                # display
-                col_label, col_score, col_rest = st.columns(3, gap="small")
-                col_label.success(label)
-                col_score.metric("Score", value=f"{score:.2%}")
-                col_rest.popover("Show all posibilities").write(
-                    pipeline_model.model.config.id2label
-                )
-
+                # pipeline_model = get_model(task, selected_model)
+                # output = pipeline_model(input_text)
+                inputs = {"inputs": input_text}
+                try:
+                    outputs = asyncio.run(api.query(inputs, model_id=selected_model))
+                    # st.json(outputs)
+                    label, score = outputs[0][0]["label"].upper(), outputs[0][0]["score"]
+                    # display
+                    col_label, col_score, col_rest = st.columns([2,1,3], gap="small")
+                    col_label.success(label)
+                    col_score.metric("Score", value=f"{score:.2%}")
+                    with col_rest.popover("Show all posibilities", use_container_width=True):
+                        for output in outputs[0]:
+                            col_label, col_score = st.columns([2,1], gap="small")
+                            col_label.progress(output["score"], text=output["label"].upper())
+                            col_score.write(f"{output['score']:.1%}")
+                except Exception as e:
+                    st.exception("Choose another model")
+                    
             case "text-classification":
                 # prediction
                 pipeline_model = get_model(task, selected_model)
@@ -125,18 +137,15 @@ with st.form(f"{task}"):
 
             case "question-answering":
                 # prediction
-                # pipeline_model = get_model(task, selected_model)
                 question_text = st.text_input("Put your question here")
                 if len(question_text) > 2:
-                    # output = pipeline_model(question=question_text, context=input_text)
-                    output = api.query(
-                        {
-                            "inputs": {
-                                "question": question_text,
-                                "context": input_text,
-                            },
-                        }
-                    )
+                    inputs = {
+                        "inputs": {
+                            "question": question_text,
+                            "context": input_text,
+                        },
+                    }
+                    output = asyncio.run(api.query(inputs))
                     answer = output["answer"]
                     score = output["score"]
                     # display

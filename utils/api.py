@@ -1,9 +1,14 @@
 from functools import lru_cache
 from pprint import pprint
-import requests
+import aiohttp
+import asyncio
 
 
-@lru_cache(maxsize=None)
+# API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
+# headers = {f"Authorization": f"Bearer {open("././tokens_key.secret", "r").read()}"}
+
+
+@lru_cache(maxsize=2)
 def get_API_URL(model_id):
     try:
         return f"https://api-inference.huggingface.co/models/{model_id}"
@@ -22,28 +27,24 @@ def get_headers():
         print("key not found")
 
 
-# API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
-# headers = {f"Authorization": f"Bearer {open("././tokens_key.secret", "r").read()}"}
-
-
-def query(payload, model_id="deepset/roberta-base-squad2"):
+async def query(payload, model_id="deepset/roberta-base-squad2"):
     API_URL = get_API_URL(model_id)
     headers = get_headers()
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload)
-        return response.json()
-    except Exception as e:
-        print(e)
-        return None
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(API_URL, headers=headers, json=payload) as response:
+                return await response.json()
+        except Exception as e:
+            print(e)
+            return None
+
+
+async def main():
+    inputs = {"inputs": "I like you. I love you"}
+    output = await query(inputs, model_id="finiteautomata/bertweet-base-sentiment-analysis")
+
+    pprint(output)
 
 
 if __name__ == "__main__":
-    output = query(
-        {
-            "inputs": {
-                "question": "What is my name?",
-                "context": "My name is Clara and I live in Berkeley.",
-            },
-        }
-    )
-    pprint(output)
+    asyncio.run(main())
