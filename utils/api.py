@@ -27,16 +27,17 @@ def get_headers():
         print("key not found")
 
 
-async def query(payload, model_id="deepset/roberta-base-squad2"):
+async def query(payload, model_id="deepset/roberta-base-squad2", task="text"):
     API_URL = get_API_URL(model_id)
     headers = get_headers()
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(API_URL, headers=headers, json=payload) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    raise Exception(await response.text())
+            if task == "text":
+                async with session.post(API_URL, headers=headers, json=payload) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        raise Exception(await response.text())
         except Exception as e:
             print(e)
             return None
