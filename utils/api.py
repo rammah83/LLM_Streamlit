@@ -33,7 +33,10 @@ async def query(payload, model_id="deepset/roberta-base-squad2"):
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(API_URL, headers=headers, json=payload) as response:
-                return await response.json()
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    raise Exception(await response.text())
         except Exception as e:
             print(e)
             return None
