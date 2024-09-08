@@ -1,36 +1,45 @@
-import json
-import requests
+import asyncio
+from narwhals import col
 import streamlit as st
-from PIL import Image
-from transformers import pipeline
-
-
-st.subheader("Hot Dog? Or Not?")
-file_name = st.file_uploader("Upload a hot dog candidate image")
-st.write(file_name)
 
 
 
-headers = {"Authorization": f"Bearer {API_TOKEN}"}
-API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
-def query(filename):
-    # with open(filename, "rb") as f:
-    #     data = f.read()
-    data = Image.open(filename)
-    response = requests.request("POST", API_URL, headers=headers, data=data)
-    return json.loads(response.content.decode("utf-8"))
-data = query(file_name)
+from utils import api
 
 
 
-# pipeline = pipeline(task="image-classification", model="julien-c/hotdog-not-hotdog")
-# if file_name is not None:
-#     col1, col2 = st.columns(2)
 
-#     image = Image.open(file_name)
-#     col1.image(image, use_column_width=True)
-#     predictions = pipeline(image)
+# async def query_image(image_file):
+#     image_data = image_file.getvalue()
+#     encoded_image = b64encode(image_data).decode("utf-8")
+#     payload = json.dumps({"inputs": encoded_image})
 
-#     col2.header("Probabilities")
-#     for p in predictions:
-#         col2.subheader(f"{ p['label'] }: { round(p['score'] * 100, 1)}%")
+#     async with aiohttp.ClientSession() as session:
+#         async with session.post(API_URL, headers=headers, data=payload) as response:
+#             if response.status == 200:
+#                 return await response.json()
+#             else:
+#                 return f"Error: {response.status}, {await response.text()}"
+
+
+st.title("Image Classification with Hugging Face API")
+selected_model = "google/vit-base-patch16-224"
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+col_img, col_info = st.columns([2,1], gap="large")
+if uploaded_file is not None:
+    col_img.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+    result = asyncio.run(api.query_image(uploaded_file, model_id=selected_model))
+    if isinstance(result, list):
+        with col_info:
+            st.write("Classification Results:")
+            for item in result:
+                col_label, col_score = st.columns([2, 1], gap="small")
+                col_label.progress(item["score"], text=item["label"])
+                col_score.write(f"{item['score']:.2%}")
+                # st.write(f"Label: {item['label']}, Score: {item['score']:.4f}")
+    else:
+        st.error(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(api.query_image(uploaded_file))

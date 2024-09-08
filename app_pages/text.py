@@ -1,8 +1,6 @@
-from narwhals import col
 import streamlit as st
 from huggingface_hub import HfApi
 import asyncio
-import torch
 from transformers import pipeline
 from utils import api
 
@@ -105,7 +103,7 @@ with st.form(f"{task}"):
                 # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
-                    outputs = asyncio.run(api.query(inputs, model_id=selected_model))
+                    outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
                     # st.json(outputs)
                     label, score = (
                         outputs[0][0]["label"].upper(),
@@ -133,7 +131,7 @@ with st.form(f"{task}"):
                 # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
-                    outputs = asyncio.run(api.query(inputs, model_id=selected_model))
+                    outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
                     # st.json(outputs)
                     label, score = (
                         outputs[0][0]["label"].upper(),
@@ -164,7 +162,7 @@ with st.form(f"{task}"):
                         "clean_up_tokenization_spaces": True,
                     },
                 }
-                outputs = asyncio.run(api.query(inputs, model_id=selected_model))
+                outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
                 # st.json(outputs)
                 summary_text = outputs[0]["summary_text"]
                 # display
@@ -184,7 +182,7 @@ with st.form(f"{task}"):
                             "context": input_text,
                         },
                     }
-                    output = asyncio.run(api.query(inputs))
+                    output = asyncio.run(api.query_text(inputs))
                     answer = output["answer"]
                     score = output["score"]
                     # display
@@ -198,7 +196,7 @@ with st.form(f"{task}"):
                     "inputs": input_text,
                     "options": {"clean_up_tokenization_spaces": True},
                 }
-                outputs = asyncio.run(api.query(inputs, model_id=selected_model))
+                outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
                 # st.json(outputs)
                 translated_text = outputs[0]["translation_text"]
                 # display
