@@ -3,9 +3,10 @@ from huggingface_hub import HfApi
 import asyncio
 from transformers import pipeline
 from utils import api
+from utils.hf_helper import hf_api, get_models_list
+from utils.hf_inference import get_inference
 
 # Variables
-hf_api = HfApi()
 tasks = [
     "sentiment-analysis",
     "text-classification",
@@ -16,43 +17,6 @@ tasks = [
     "Maths Solver",
 ]
 
-
-# region:Functions
-def get_models_list(
-    task="text-classification", sort_key="likes", language: str | list[str] = "en"
-) -> list[dict]:
-    """
-    Returns a list of dictionaries containing model information.
-    """
-    models = hf_api.list_models(
-        filter=task,
-        search="en_to_fr" if task == "translations" else None,
-        sort=sort_key,
-        language=language,
-        direction=-1,
-        limit=10,
-    )
-
-    # Store as a list of dictionaries
-    return [
-        {
-            "id": model.modelId,
-            "downloads": model.downloads,
-            "likes": model.likes,
-            "created_at": model.created_at.date(),
-        }
-        for model in models
-    ]
-
-
-@st.cache_resource
-def get_model(task: str, model_id: str):
-    """Get a model from the Hub by its task and ID."""
-    return pipeline(task=task, model=model_id)
-
-
-# endregion:Functions
-
 # region:Display Elements commun elements
 with st.sidebar:
     task = st.selectbox("Choose Tasks", tasks, on_change=api.get_API_URL.cache_clear())
@@ -60,9 +24,9 @@ with st.sidebar:
 
 with st.popover("Explore Models", use_container_width=True):
     col1, col2 = st.columns([1, 3])
-    key_sort = col1.radio("Sortby", ["downloads", "likes", "last_modified"])
+    key_sort = col1.radio("Sortby", ["trending","downloads", "likes", "last_modified"])
     lang = col1.multiselect(
-        "Language", ["en", "fr", "ar", "es", "de", "jp"], default=["en", "fr"]
+        "Language", ["en", "fr", "ar", "es", "de", "jp"], default=["en"]
     )
     limit = col1.slider("Limit to", min_value=5, max_value=20, value=5, step=5)
     models_list = get_models_list(task, key_sort, language=lang)[:limit]
@@ -99,15 +63,16 @@ with st.form(f"{task}"):
         match task:
             case "sentiment-analysis":
                 # prediction
-                # pipeline_model = get_model(task, selected_model)
+                # pipeline_model = get_pipeline_model(task, selected_model)
                 # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
-                    outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
+                    # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
+                    outputs = asyncio.run(get_inference(input_text))
                     # st.json(outputs)
                     label, score = (
-                        outputs[0][0]["label"].upper(),
-                        outputs[0][0]["score"],
+                        outputs[0].label.upper(),
+                        outputs[0].score,
                     )
                     # display
                     col_label, col_score, col_rest = st.columns([2, 1, 3], gap="small")
@@ -116,18 +81,18 @@ with st.form(f"{task}"):
                     with col_rest.popover(
                         "Show all posibilities", use_container_width=True
                     ):
-                        for output in outputs[0]:
+                        for output in outputs:
                             col_label, col_score = st.columns([2, 1], gap="small")
                             col_label.progress(
-                                output["score"], text=output["label"].upper()
+                                output.score, text=output.label.upper()
                             )
-                            col_score.write(f"{output['score']:.1%}")
+                            col_score.write(f"{output.score:.1%}")
                 except Exception as e:
                     st.exception("Choose another model")
 
             case "text-classification":
                 # prediction
-                # pipeline_model = get_model(task, selected_model)
+                # pipeline_model = get_pipeline_model(task, selected_model)
                 # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
