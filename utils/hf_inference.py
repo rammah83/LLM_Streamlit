@@ -3,9 +3,9 @@ from pprint import pprint
 from huggingface_hub import AsyncInferenceClient, InferenceClient
 
 
-async def get_inference(inputs):
+async def get_inference(inputs, model_id="ProsusAI/finbert"):
     client = AsyncInferenceClient(
-        model="ProsusAI/finbert",
+        model=model_id,
         token=open("././tokens_key.secret", "r", encoding="utf-8").read(),
     )
     status = await client.get_model_status()
@@ -17,7 +17,7 @@ async def get_inference(inputs):
 
 if __name__ == "__main__":
     outputs = asyncio.run(get_inference("I like you"))
-    print(f"{outputs[0].label} with a score of {outputs[0].score:.2%}")
+    pprint(f"{outputs[0].label} with a score of {outputs[0].score:.2%}")
     # print(client.health_check())
     models = InferenceClient().list_deployed_models()
 

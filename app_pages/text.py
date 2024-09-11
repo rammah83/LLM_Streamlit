@@ -1,5 +1,5 @@
 import streamlit as st
-from huggingface_hub import HfApi
+
 import asyncio
 from transformers import pipeline
 from utils import api
@@ -15,6 +15,7 @@ tasks = [
     "translation",
     "text-generation",
     "Maths Solver",
+    "Code-Generation",
 ]
 
 # region:Display Elements commun elements
@@ -24,7 +25,7 @@ with st.sidebar:
 
 with st.popover("Explore Models", use_container_width=True):
     col1, col2 = st.columns([1, 3])
-    key_sort = col1.radio("Sortby", ["trending","downloads", "likes", "last_modified"])
+    key_sort = col1.radio("Sortby", ["downloads", "likes", "last_modified", "trending"])
     lang = col1.multiselect(
         "Language", ["en", "fr", "ar", "es", "de", "jp"], default=["en"]
     )
@@ -40,9 +41,7 @@ with st.sidebar:
         key="select_model",
         on_change=api.get_API_URL.cache_clear(),
     )
-    model_info = hf_api.model_info(
-        r"lxyuan/distilbert-base-multilingual-cased-sentiments-student"
-    )
+    model_info = hf_api.model_info(selected_model)
     st.popover("Model Info").write(model_info.cardData)
 # endregion:Display Elements commun elements
 
@@ -50,7 +49,7 @@ with st.form(f"{task}"):
     input_text = st.text_area(f"{task.upper()}")
     if task == "summarization":
         text_length = len(input_text.split())
-        if text_length < 30:
+        if text_length < 10:
             st.warning("Text is too short to be summarized")
         else:
             max_length = st.slider(
@@ -60,20 +59,19 @@ with st.form(f"{task}"):
                 value=int(1 * text_length),
             )
     if st.form_submit_button("Submit"):
+        task = "text-classification" if task == "sentiment-analysis" else task
         match task:
-            case "sentiment-analysis":
+            case "text-classification":
                 # prediction
                 # pipeline_model = get_pipeline_model(task, selected_model)
                 # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
                     # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                    outputs = asyncio.run(get_inference(input_text))
+                    outputs = asyncio.run(get_inference(input_text, selected_model))
                     # st.json(outputs)
-                    label, score = (
-                        outputs[0].label.upper(),
-                        outputs[0].score,
-                    )
+                    label = outputs[0].label.upper()
+                    score = outputs[0].score
                     # display
                     col_label, col_score, col_rest = st.columns([2, 1, 3], gap="small")
                     col_label.success(label)
@@ -88,36 +86,7 @@ with st.form(f"{task}"):
                             )
                             col_score.write(f"{output.score:.1%}")
                 except Exception as e:
-                    st.exception("Choose another model")
-
-            case "text-classification":
-                # prediction
-                # pipeline_model = get_pipeline_model(task, selected_model)
-                # output = pipeline_model(input_text)
-                inputs = {"inputs": input_text}
-                try:
-                    outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                    # st.json(outputs)
-                    label, score = (
-                        outputs[0][0]["label"].upper(),
-                        outputs[0][0]["score"],
-                    )
-                    # display
-                    col_label, col_score, col_rest = st.columns([2, 1, 3], gap="small")
-                    col_label.success(label)
-                    col_score.metric("Score", value=f"{score:.2%}")
-                    with col_rest.popover(
-                        "Show all posibilities", use_container_width=True
-                    ):
-                        for output in outputs[0]:
-                            col_label, col_score = st.columns([2, 1], gap="small")
-                            col_label.progress(
-                                output["score"], text=output["label"].upper()
-                            )
-                            col_score.write(f"{output['score']:.1%}")
-                except Exception as e:
-                    st.exception("Choose another model")
-
+                    st.exception("Choose another model")                      
             case "summarization":
                 # prediction
                 inputs = {
@@ -127,16 +96,17 @@ with st.form(f"{task}"):
                         "clean_up_tokenization_spaces": True,
                     },
                 }
-                outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
+                # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
+                outputs = asyncio.run(get_inference(input_text, selected_model))
                 # st.json(outputs)
-                summary_text = outputs[0]["summary_text"]
+                try: summary_text = outputs["summary_text"]
+                except: summary_text = outputs["translation_text"]
                 # display
                 st.text_area("the summary", value=summary_text)
                 st.success(
                     f"Summary Percentage: {len(summary_text.split()) / text_length:.0%}"
                 )
                 # st.write(pipeline_model.model.config.min_length)
-
             case "question-answering":
                 # prediction
                 question_text = st.text_input("Put your question here")
@@ -148,13 +118,13 @@ with st.form(f"{task}"):
                         },
                     }
                     output = asyncio.run(api.query_text(inputs))
+                    st.json(output)
                     answer = output["answer"]
                     score = output["score"]
                     # display
                     col1, col2 = st.columns(2, gap="small")
                     col1.success(answer)
                     col2.metric("Score", value=f"{score:.2%}")
-
             case "translation":
                 # prediction
                 inputs = {
@@ -166,7 +136,6 @@ with st.form(f"{task}"):
                 translated_text = outputs[0]["translation_text"]
                 # display
                 st.text_area("Translation:", value=translated_text)
-
             case "Maths Solver":
                 st.subheader("Maths Solver")
                 # Use a pipeline as a high-level helper
@@ -182,7 +151,6 @@ with st.form(f"{task}"):
                 #     "stop_strings": ["```output"], # Generate until Python code block is complete
                 #     "tokenizer": pipe.tokenizer,
                 # }
-
                 # outputs = pipe(prompt, **gen_config)
                 # text = outputs[0]["generated_text"]
                 # st.write(text)
