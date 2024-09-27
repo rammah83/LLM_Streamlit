@@ -47,6 +47,7 @@ with st.sidebar:
 
 with st.form(f"{task}"):
     input_text = st.text_area(f"{task.upper()}")
+    task = "text-classification" if task == "sentiment-analysis" else task
     if task == "summarization":
         text_length = len(input_text.split())
         if text_length < 10:
@@ -59,16 +60,12 @@ with st.form(f"{task}"):
                 value=int(1 * text_length),
             )
     if st.form_submit_button("Submit"):
-        task = "text-classification" if task == "sentiment-analysis" else task
         match task:
             case "text-classification":
-                # prediction
-                # pipeline_model = get_pipeline_model(task, selected_model)
-                # output = pipeline_model(input_text)
                 inputs = {"inputs": input_text}
                 try:
                     # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                    outputs = asyncio.run(get_inference(input_text, selected_model))
+                    outputs = asyncio.run(get_inference(input_text, selected_model, task=task))
                     # st.json(outputs)
                     label = outputs[0].label.upper()
                     score = outputs[0].score
@@ -81,26 +78,24 @@ with st.form(f"{task}"):
                     ):
                         for output in outputs:
                             col_label, col_score = st.columns([2, 1], gap="small")
-                            col_label.progress(
-                                output.score, text=output.label.upper()
-                            )
+                            col_label.progress(output.score, text=output.label.upper())
                             col_score.write(f"{output.score:.1%}")
                 except Exception as e:
-                    st.exception("Choose another model")                      
+                    st.exception("Choose another model")
             case "summarization":
                 # prediction
-                inputs = {
-                    "inputs": input_text,
-                    "parameters": {
-                        "max_length": max_length,
-                        "clean_up_tokenization_spaces": True,
-                    },
+                inputs = input_text
+                parameters = {
+                    "max_length": max_length,
+                    "clean_up_tokenization_spaces": True,
                 }
                 # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                outputs = asyncio.run(get_inference(input_text, selected_model))
+                outputs = asyncio.run(get_inference(inputs, selected_model, task, parameters=parameters))
                 # st.json(outputs)
-                try: summary_text = outputs["summary_text"]
-                except: summary_text = outputs["translation_text"]
+                try:
+                    summary_text = outputs["summary_text"]
+                except:
+                    summary_text = outputs["translation_text"]
                 # display
                 st.text_area("the summary", value=summary_text)
                 st.success(
@@ -154,11 +149,19 @@ with st.form(f"{task}"):
                 # outputs = pipe(prompt, **gen_config)
                 # text = outputs[0]["generated_text"]
                 # st.write(text)
-                st.link_button("Open maths solver", url="https://huggingface.co/spaces/AI-MO/math-olympiad-solver") # https://huggingface.co/spaces/AI-MO/math-olympiad-solver
-                st.page_link(label="Open maths solver", page="https://huggingface.co/spaces/AI-MO/math-olympiad-solver")
-                st.html("""
+                st.link_button(
+                    "Open maths solver",
+                    url="https://huggingface.co/spaces/AI-MO/math-olympiad-solver",
+                )  # https://huggingface.co/spaces/AI-MO/math-olympiad-solver
+                st.page_link(
+                    label="Open maths solver",
+                    page="https://huggingface.co/spaces/AI-MO/math-olympiad-solver",
+                )
+                st.html(
+                    """
                         <iframe src="https://huggingface.co/spaces/AI-MO/math-olympiad-solver" width="100%" height="500"</iframe>
-                        """)
+                        """
+                )
             case _:
                 st.warning("Not implimented")
 

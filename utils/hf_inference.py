@@ -3,14 +3,25 @@ from pprint import pprint
 from huggingface_hub import AsyncInferenceClient, InferenceClient
 
 
-async def get_inference(inputs, model_id="ProsusAI/finbert"):
+async def get_inference(inputs, model_id="ProsusAI/finbert", task="text-classification", parameters={}):
     client = AsyncInferenceClient(
         model=model_id,
         token=open("././tokens_key.secret", "r", encoding="utf-8").read(),
     )
     status = await client.get_model_status()
     if status.state == "Loadable":
-        return await client.text_classification(inputs)
+        if task == "text-classification":
+            return await client.text_classification(inputs)
+        elif task == "text-generation":
+            return await client.text_generation(inputs)
+        elif task == "summarization":
+            return await client.summarization(inputs, parameters=parameters)
+        elif task == "question-answering":
+            return await client.question_answering(inputs)
+        elif task == "translation":
+            return await client.translation(inputs)
+        else:
+            return "Task is not loadable"
     else:
         return "Model is not loadable"
 
