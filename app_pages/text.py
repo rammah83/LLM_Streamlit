@@ -1,6 +1,7 @@
 import streamlit as st
 
 import asyncio
+from tensorboard import summary
 from transformers import pipeline
 from utils import api
 from utils.hf_helper import hf_api, get_models_list
@@ -44,28 +45,38 @@ with st.sidebar:
     model_info = hf_api.model_info(selected_model)
     st.popover("Model Info").write(model_info.cardData)
 # endregion:Display Elements commun elements
-
 with st.form(f"{task}"):
     input_text = st.text_area(f"{task.upper()}")
+    col_params, col_submit = st.columns([4, 1], gap="small")
     task = "text-classification" if task == "sentiment-analysis" else task
     if task == "summarization":
-        text_length = len(input_text.split())
+        text_length = len(input_text.split()) if input_text else 0
         if text_length < 10:
             st.warning("Text is too short to be summarized")
         else:
-            max_length = st.slider(
-                "max length",
-                min_value=30,
-                max_value=int(2 * text_length),
-                value=int(1 * text_length),
-            )
-    if st.form_submit_button("Submit"):
+            with col_params.popover(
+                "Summarization Parameters",
+                use_container_width=True,
+                help="Try different parameters to get better results",
+            ):
+                to_clean_up_spaces = st.checkbox("Clean Up Spaces", value=True)
+                max_length = st.slider(
+                    "Max Length",
+                    min_value=30,
+                    max_value=int(0.9 * text_length),
+                    value=int(0.5 * text_length),
+                )
+    elif task == "question-answering":
+        question_text = col_params.text_input("Put your question here")
+    if col_submit.form_submit_button("Submit", use_container_width=True):
         match task:
             case "text-classification":
                 inputs = {"inputs": input_text}
                 try:
                     # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                    outputs = asyncio.run(get_inference(input_text, selected_model, task=task))
+                    outputs = asyncio.run(
+                        get_inference(input_text, selected_model, task=task)
+                    )
                     # st.json(outputs)
                     label = outputs[0].label.upper()
                     score = outputs[0].score
@@ -87,50 +98,56 @@ with st.form(f"{task}"):
                 inputs = input_text
                 parameters = {
                     "max_length": max_length,
-                    "clean_up_tokenization_spaces": True,
+                    "clean_up_tokenization_spaces": to_clean_up_spaces,
                 }
                 # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                outputs = asyncio.run(get_inference(inputs, selected_model, task, parameters=parameters))
-                # st.json(outputs)
+                outputs = asyncio.run(
+                    get_inference(inputs, selected_model, task, parameters=parameters)
+                )
+                st.json(outputs)
                 try:
-                    summary_text = outputs["summary_text"]
+                    summary_text = (
+                        "No summary inferred"
+                        if outputs["summary_text"] is None
+                        else outputs["summary_text"]
+                    )
                 except:
                     summary_text = outputs["translation_text"]
                 # display
-                st.text_area("the summary", value=summary_text)
+                st.text_area("Summarized Text: ", value=summary_text)
                 st.success(
                     f"Summary Percentage: {len(summary_text.split()) / text_length:.0%}"
                 )
                 # st.write(pipeline_model.model.config.min_length)
+            case "translation":
+                # prediction
+                inputs = input_text
+                parameters = {
+                    "src_lang": "en",
+                    "tgt_lang": "de",
+                }
+                # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
+                outputs = asyncio.run(
+                    get_inference(inputs, selected_model, task, parameters=parameters)
+                )
+                st.json(outputs)
+                translated_text = outputs[0]["translation_text"]
+                # display
+                st.text_area("Translation:", value=translated_text)
             case "question-answering":
                 # prediction
-                question_text = st.text_input("Put your question here")
                 if len(question_text) > 2:
-                    inputs = {
-                        "inputs": {
-                            "question": question_text,
-                            "context": input_text,
-                        },
-                    }
-                    output = asyncio.run(api.query_text(inputs))
-                    st.json(output)
-                    answer = output["answer"]
-                    score = output["score"]
+                    inputs = {"question": question_text, "context": input_text}
+                    # output = asyncio.run(api.query_text(inputs))
+                    outputs = asyncio.run(get_inference(inputs, selected_model, task))
+                    # st.json(outputs)
+                    answer = outputs["answer"]
+                    score = outputs["score"]
                     # display
                     col1, col2 = st.columns(2, gap="small")
                     col1.success(answer)
                     col2.metric("Score", value=f"{score:.2%}")
-            case "translation":
-                # prediction
-                inputs = {
-                    "inputs": input_text,
-                    "options": {"clean_up_tokenization_spaces": True},
-                }
-                outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
-                # st.json(outputs)
-                translated_text = outputs[0]["translation_text"]
-                # display
-                st.text_area("Translation:", value=translated_text)
+
             case "Maths Solver":
                 st.subheader("Maths Solver")
                 # Use a pipeline as a high-level helper

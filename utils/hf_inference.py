@@ -17,7 +17,7 @@ async def get_inference(inputs, model_id="ProsusAI/finbert", task="text-classifi
         elif task == "summarization":
             return await client.summarization(inputs, parameters=parameters)
         elif task == "question-answering":
-            return await client.question_answering(inputs)
+            return await client.question_answering(**inputs)
         elif task == "translation":
             return await client.translation(inputs)
         else:
