@@ -1,9 +1,34 @@
 import asyncio
+import aiohttp
 from pprint import pprint
 from huggingface_hub import AsyncInferenceClient, InferenceClient
 
 
-async def get_inference(inputs, model_id="ProsusAI/finbert", task="text-classification", parameters={}):
+async def get_serverless_models_list(task="text-classification"):
+    # Set your Hugging Face API token (get it from your HF account settings)
+    with open("././tokens_key.secret", "r", encoding="utf-8") as f:
+        api_token = f.read().strip()
+
+    # Set the API endpoint and headers
+    endpoint = "https://api-inference.huggingface.co/models"
+    headers = {"Authorization": f"Bearer {api_token}"}
+
+    # Call the list_models method with the task filter
+    params = {"task": task}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(endpoint, headers=headers, params=params) as response:
+            # Check if the response was successful
+            if response.status == 200:
+                # Get the list of models
+                return await response.json()
+            else:
+                return f"Error: {response.status}"
+
+
+async def get_inference(
+    inputs, model_id="ProsusAI/finbert", task="text-classification", parameters={}
+):
     client = AsyncInferenceClient(
         model=model_id,
         token=open("././tokens_key.secret", "r", encoding="utf-8").read(),
@@ -24,6 +49,20 @@ async def get_inference(inputs, model_id="ProsusAI/finbert", task="text-classifi
             return "Task is not loadable"
     else:
         return "Model is not loadable"
+
+
+def get_inference_from_gradio_client(
+    inputs="Write a code in Python that prints hello", model_id="Tonic/Yi-Coder-9B"
+):
+    from gradio_client import Client
+
+    client = Client(model_id)
+    return client.predict(
+        system_prompt="You are a helpful coding assistant. Provide clear and concise code examples.",
+        user_prompt=inputs,
+        max_length=650,
+        api_name="/generate_code",
+    )
 
 
 if __name__ == "__main__":

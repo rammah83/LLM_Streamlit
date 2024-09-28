@@ -1,11 +1,13 @@
 import streamlit as st
 
 import asyncio
-from tensorboard import summary
-from transformers import pipeline
 from utils import api
 from utils.hf_helper import hf_api, get_models_list
-from utils.hf_inference import get_inference
+from utils.hf_inference import (
+    get_inference,
+    get_inference_from_gradio_client,
+    get_serverless_models_list,
+)
 
 # Variables
 tasks = [
@@ -42,6 +44,7 @@ with st.sidebar:
         key="select_model",
         on_change=api.get_API_URL.cache_clear(),
     )
+if selected_model is not None:
     model_info = hf_api.model_info(selected_model)
     st.popover("Model Info").write(model_info.cardData)
 # endregion:Display Elements commun elements
@@ -124,14 +127,14 @@ with st.form(f"{task}"):
                 inputs = input_text
                 parameters = {
                     "src_lang": "en",
-                    "tgt_lang": "de",
+                    "tgt_lang": "fr",
                 }
                 # outputs = asyncio.run(api.query_text(inputs, model_id=selected_model))
                 outputs = asyncio.run(
                     get_inference(inputs, selected_model, task, parameters=parameters)
                 )
-                st.json(outputs)
-                translated_text = outputs[0]["translation_text"]
+                # st.json(outputs)
+                translated_text = outputs["translation_text"]
                 # display
                 st.text_area("Translation:", value=translated_text)
             case "question-answering":
@@ -148,6 +151,12 @@ with st.form(f"{task}"):
                     col1.success(answer)
                     col2.metric("Score", value=f"{score:.2%}")
 
+            case "Code-Generation":
+                inputs = input_text
+                outputs = get_inference_from_gradio_client(
+                    inputs, model_id="Tonic/Yi-Coder-9B"
+                )
+                st.code(outputs)
             case "Maths Solver":
                 st.subheader("Maths Solver")
                 # Use a pipeline as a high-level helper
@@ -182,6 +191,8 @@ with st.form(f"{task}"):
             case _:
                 st.warning("Not implimented")
 
+st.write(asyncio.run(
+    get_serverless_models_list(task)))
 # import torch
 # st.write(torch.cuda.is_available())
 # st.write(tf.test.is_gpu_available(cuda_only=True))
