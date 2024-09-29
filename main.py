@@ -11,6 +11,7 @@ pages = {
     "MODELING": [
         st.Page("./app_pages/text.py", title="Text Tasks", icon="🤖"),
         st.Page("./app_pages/image.py", title="Image Tasks", icon="🧮"),
+        st.Page("./app_pages/chatwithdoc.py", title="Chatbot Tasks", icon="🧮"),
     ],
 }
 

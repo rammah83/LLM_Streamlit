@@ -7,7 +7,7 @@ from huggingface_hub import AsyncInferenceClient, InferenceClient
 async def get_serverless_models_list(task="text-classification"):
     # Set your Hugging Face API token (get it from your HF account settings)
     with open("././tokens_key.secret", "r", encoding="utf-8") as f:
-        api_token = f.read().strip()
+        api_token = f.read()
 
     # Set the API endpoint and headers
     endpoint = "https://api-inference.huggingface.co/models"
@@ -44,7 +44,7 @@ async def get_inference(
         elif task == "question-answering":
             return await client.question_answering(**inputs)
         elif task == "translation":
-            return await client.translation(inputs)
+            return await client.translation(inputs, **parameters)
         else:
             return "Task is not loadable"
     else:
