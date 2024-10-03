@@ -1,50 +1,18 @@
-from narwhals import col
-from numpy import real
 import sympy as sp
-from string import ascii_letters
+from string import ascii_lowercase
 import streamlit as st  # type: ignore
 
-latters_symbols = (
-    "x",
-    "y",
-    "z",
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-)
+latters_symbols = list(ascii_lowercase)
 
 st.logo(
-    "https://t3.ftcdn.net/jpg/05/51/43/56/360_F_551435602_v0rxhHEIgbQNWozIjcgJOR2Nmp1SINMV.jpg"
+    r".\res\img\mylogo.jpeg",
 )
 st.subheader("Maths :blue[cool] :sunglasses:")
 
 expr = st.text_input("Enter your expression here")
 try:
     expression = sp.sympify(expr)
-    st.write(sp.sympify(expression))
+    st.write(expression)
     st.write("---")
 except:
     st.warning("Write a valide Sympy Expression")
@@ -52,22 +20,24 @@ else:
     col_func, col_submit, _ = st.columns(
         [1, 1, 4], gap="small", vertical_alignment="bottom"
     )
-    variables = st.sidebar.multiselect(
-        "Select the math symbols",
-        latters_symbols,
+    variables_symbols:set = expression.free_symbols
+    symb_vars = st.sidebar.multiselect(
+        label="Select the math symbols",
+        options=variables_symbols,
+        default=next(iter(variables_symbols)),
         placeholder="Choose varaible(s)",
     )
     # col_m.write("Choosed varaibles and parameters:")
-    if variables == []:
+    if symb_vars == []:
         st.sidebar.warning("Choose at least one variable")
-        symb_vars = sp.symbols("x")
+        # symb_vars = sp.symbols("x", integer=True)
     else:
-        symb_vars = sp.symbols(" ".join(variables))
-        st.sidebar.write(f"variables:", symb_vars)
+        st.sidebar.write(f"variables:", ' '.join(str(symb_vars)))
         
+
     functionality = col_func.selectbox(
         "Select funtionality",
-        sorted(["simplify", "solve", "factorize", "expand", "derive", "integrate"]),
+        sorted(["simplify", "factorize", "expand", "limit", "solve", "derive", "integrate"]),
         # on change click on submit button
         on_change=lambda: st.session_state.get("btn_submit") == True,
     )
@@ -77,27 +47,32 @@ else:
     if btn_submit:
         with st.spinner("Calculating..."):
             match functionality:
+                # basic
                 case "simplify":
                     result = sp.simplify(expression)
+                    st.write(result)
                 case "factorize":
                     result = sp.factor(expression)
+                    st.write(result)
                 case "expand":
                     result = sp.expand(expression)
+                    st.write(result)
+                # advanced           
+                case "limit":
+                    st.latex(sp.latex(f"limit({expression}), {symb_vars[0]} --> oo)"))
+                    result = sp.limit(expression, symb_vars[0], symb_vars[1])
+                    st.write(result)          
                 case "solve":
-                    
                     result = sp.solve(expression, symb_vars)
+                    if result == []:
+                        st.warning("No solution found")
+                    else:
+                        st.write(f"Solution for {symb_vars}")
+                        for item in result:
+                            st.write(sp.simplify(item))
                 case "derive":
                     result = sp.diff(expression, symb_vars).doit(simplify=True)
                 case "integrate":
                     result = sp.integrate(expression, symb_vars).doit(simplify=True)
                 case _:
                     st.write("Wrong input")
-            if isinstance(result, list):
-                st.write(f"Solution for {symb_vars}")
-                if result == []:
-                    st.warning("No solution found")
-                for item in result:
-                    st.write(sp.simplify(item))
-                    # st.write((item))
-            else:
-                st.write(sp.simplify(result))
