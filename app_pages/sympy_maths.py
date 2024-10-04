@@ -59,9 +59,12 @@ else:
                     st.write(result)
                 # advanced           
                 case "limit":
-                    st.latex(sp.latex(f"limit({expression}), {symb_vars[0]} --> oo)"))
-                    result = sp.limit(expression, symb_vars[0], symb_vars[1])
-                    st.write(result)          
+                    result = sp.limit(expression, symb_vars[0], sp.oo, dir='+')
+                    dir = '+'
+                    # latex_expr = r'\lim_{{x \to \infty}} ' + sp.latex(expression) + ' = ' + sp.latex(result)
+                    latex_expr = r"\lim_{{" + sp.latex(symb_vars[0]) + r" \to" + dir + r"\ " +  sp.latex(sp.oo) + r'}}'  + sp.latex(expression) + ' = ' + sp.latex(result, )
+                    st.latex(latex_expr)
+                    # st.write(sp.latex(result))         
                 case "solve":
                     result = sp.solve(expression, symb_vars)
                     if result == []:
