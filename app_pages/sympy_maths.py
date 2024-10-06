@@ -4,9 +4,9 @@ import streamlit as st  # type: ignore
 
 latters_symbols = list(ascii_lowercase)
 
-st.logo(
-    r".\res\img\mylogo.jpeg",
-)
+# st.logo(
+#     r".\res\img\mylogo.jpeg",
+# )
 st.subheader("Maths :blue[cool] :sunglasses:")
 
 expr = st.text_input("Enter your expression here")
@@ -20,7 +20,7 @@ else:
     col_func, col_submit, _ = st.columns(
         [1, 1, 4], gap="small", vertical_alignment="bottom"
     )
-    variables_symbols:set = expression.free_symbols
+    variables_symbols: set = expression.free_symbols
     symb_vars = st.sidebar.multiselect(
         label="Select the math symbols",
         options=variables_symbols,
@@ -32,18 +32,22 @@ else:
         st.sidebar.warning("Choose at least one variable")
         # symb_vars = sp.symbols("x", integer=True)
     else:
-        st.sidebar.write(f"variables:", ' '.join(str(symb_vars)))
-        
+        st.sidebar.write(f"variables:", " ".join(str(symb_vars)))
 
     functionality = col_func.selectbox(
         "Select funtionality",
-        sorted(["simplify", "factorize", "expand", "limit", "solve", "derive", "integrate"]),
+        sorted(
+            ["simplify", "factorize", "expand", "limit", "solve", "derive", "integrate"]
+        ),
         # on change click on submit button
         on_change=lambda: st.session_state.get("btn_submit") == True,
     )
     # btn_submit = col_submit.write('---')
     btn_submit = col_submit.button("Submit")
-
+    if functionality == "limit":
+        col_dir, col_num = col_func.columns([1,1], gap="small")
+        dir_to_number = col_dir.selectbox("Direction", ["+-", "+", "-"], index=0)      
+        to_number = sp.sympify(col_num.text_input(f"{symb_vars[0]} -->:", value='oo', help="Use 'oo' for infinity"))
     if btn_submit:
         with st.spinner("Calculating..."):
             match functionality:
@@ -57,14 +61,25 @@ else:
                 case "expand":
                     result = sp.expand(expression)
                     st.write(result)
-                # advanced           
+                # advanced
                 case "limit":
-                    result = sp.limit(expression, symb_vars[0], sp.oo, dir='+')
-                    dir = '+'
-                    # latex_expr = r'\lim_{{x \to \infty}} ' + sp.latex(expression) + ' = ' + sp.latex(result)
-                    latex_expr = r"\lim_{{" + sp.latex(symb_vars[0]) + r" \to" + dir + r"\ " +  sp.latex(sp.oo) + r'}}'  + sp.latex(expression) + ' = ' + sp.latex(result, )
+                    result = sp.limit(
+                        e=expression, z=symb_vars[0], z0=to_number, dir=dir_to_number,
+                    )
+                    latex_expr = (
+                        r"\lim_{{"
+                        + sp.latex(symb_vars[0])
+                        + r" \to"
+                        + dir_to_number
+                        + r"\ "
+                        + sp.latex(to_number)
+                        + r"}}"
+                        + sp.latex(expression)
+                        + " = "
+                        + sp.latex(result)                       
+                    )
                     st.latex(latex_expr)
-                    # st.write(sp.latex(result))         
+                    # st.write(sp.latex(result))
                 case "solve":
                     result = sp.solve(expression, symb_vars)
                     if result == []:
