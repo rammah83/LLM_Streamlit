@@ -1,9 +1,9 @@
+import re
 import sympy as sp
 from string import ascii_lowercase
 import streamlit as st  # type: ignore
 
 latters_symbols = list(ascii_lowercase)
-
 # st.logo(
 #     r".\res\img\mylogo.jpeg",
 # )
@@ -63,23 +63,9 @@ else:
                     st.write(result)
                 # advanced
                 case "limit":
-                    result = sp.limit(
-                        e=expression, z=symb_vars[0], z0=to_number, dir=dir_to_number,
-                    )
-                    latex_expr = (
-                        r"\lim_{{"
-                        + sp.latex(symb_vars[0])
-                        + r" \to"
-                        + dir_to_number
-                        + r"\ "
-                        + sp.latex(to_number)
-                        + r"}}"
-                        + sp.latex(expression)
-                        + " = "
-                        + sp.latex(result)                       
-                    )
-                    st.latex(latex_expr)
-                    # st.write(sp.latex(result))
+                    limit_expr = sp.Limit(e=expression, z=symb_vars[0], z0=to_number, dir=dir_to_number)
+                    result = limit_expr.doit(simplify=True)
+                    st.latex(sp.latex(limit_expr) + " = " + sp.latex(result))
                 case "solve":
                     result = sp.solve(expression, symb_vars)
                     if result == []:
@@ -89,8 +75,18 @@ else:
                         for item in result:
                             st.write(sp.simplify(item))
                 case "derive":
-                    result = sp.diff(expression, symb_vars).doit(simplify=True)
+                    derive_expr = sp.Derivative(expression, *symb_vars, evaluate=False)
+                    # result = sp.diff(expression, symb_vars).doit(simplify=True)
+                    result = derive_expr.doit(deep=False)
+                    st.latex(sp.latex(derive_expr) + " = " + sp.latex(result))
+                    # another way
+                    st.write("---")
+                    f = sp.symbols("f", cls=sp.Function)
+                    f = expression
+                    exper = f.diff(*symb_vars).doit(simplify=True)
+                    st.write(exper)
                 case "integrate":
                     result = sp.integrate(expression, symb_vars).doit(simplify=True)
                 case _:
                     st.write("Wrong input")
+
