@@ -1,4 +1,3 @@
-import re
 import sympy as sp
 from string import ascii_lowercase
 import streamlit as st  # type: ignore
