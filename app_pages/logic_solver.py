@@ -79,26 +79,27 @@ validites = {
     str(symbol): st.session_state[f"check_{symbol}"] for symbol in selected_symbols
 }
 
-# get non unique symbols in selected_symbols
-if col_symbol.button("CHECK SYMPBOLS"):
-    if len(set(selected_symbols)) < len(selected_symbols):
-        col_sentence.error("You can't select same symbols twice!")
-    else:
-        col_sentence.success(f"You selected: {', '.join(selected_symbols)}")
-
-logical_statement = st.text_area(
-    "Write logical Statement",
-    help="use '>>' for 'implies', '&' for 'and', '|' for 'or', '~' for 'not'",
-)
-if st.button("SOLVE"):
-    col_sentence, col_result, _ = st.columns(
-        [2, 1, 4], gap="small", vertical_alignment="top"
+if len(st.session_state.selectboxes) >= 1:
+    # get non unique symbols in selected_symbols
+    if col_symbol.button("CHECK", type="primary"):
+        if len(set(selected_symbols)) < len(selected_symbols):
+            col_sentence.error("You can't select same symbols twice!")
+        else:
+            col_sentence.success(f"You selected: {', '.join(selected_symbols)}")
+    logical_statement = st.text_area(
+        "Write logical Statement",
+        help="use '>>' for 'implies', '&' for 'and', '|' for 'or', '~' for 'not'",
     )
-    for statement in logical_statement.split("\n"):
-        # st.latex(sp.sympify(statement).atoms())
-        symp_statement = sp.sympify(statement)
-        symp_result = symp_statement.subs(
-            {f"{k}": validites[f"{k}"] for k in symp_statement.atoms()}
+    st.write("---")
+    if st.button("SOLVE"):
+        col_sentence, col_result, _ = st.columns(
+            [2, 1, 4], gap="small", vertical_alignment="top"
         )
-        col_sentence.latex(sp.latex(symp_statement))
-        col_result.latex(symp_result)
+        for statement in logical_statement.split("\n"):
+            # st.latex(sp.sympify(statement).atoms())
+            symp_statement = sp.sympify(statement)
+            symp_result = symp_statement.subs(
+                {f"{k}": validites[f"{k}"] for k in symp_statement.atoms()}
+            )
+            col_sentence.latex(sp.latex(symp_statement))
+            col_result.latex(symp_result)
