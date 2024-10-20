@@ -12,52 +12,28 @@ import streamlit as st  # type: ignore
 
 
 # Define symbolic variables
-all_symbols = sp.symbols("O B A")
+sp_symbols = sp.symbols("A B C D")
 # P, B, A, W, E, G = sp.symbols('P B A W E G')
-all_symbols = [str(symbol) for symbol in sp.symbols("A B C D")]
+all_symbols = [str(symbol) for symbol in sp_symbols]
 
 
-# # Define logical statements
-# # 1. O ⇒ A (Omnipotence implies ability)
-# st.write("### Choose symbols")
-# col_symbol, col_sentence = st.columns([2, 6], gap="small", vertical_alignment="top")
-# s, p = [], []
-# proposition = dict()
-# for i, symbol in enumerate(all_symbols):
-#     s.append(col_symbol.selectbox("", set(all_symbols) - set(s), key=symbol))
-#     p.append(col_sentence.text_input("", value="Omnipotence", key=i))
-#     # proposition[s[i]] = col_result.checkbox("True", key=i+100, value=True)
-# # s2 = col_symbol.selectbox("", set(all_symbols) - {s1})
-# # prop2 = col_sentence.text_input("", value="ability")
-
-# st.write("---")
-# st.write("### Build Rules")
-
-
-# stmt1 = ((s[0] >> s[1]) & s[2]) & s[3]
-# col_symbol.latex(sp.latex(stmt1))
-# col_sentence.text(f"{p[0]} ⇒ {p[1]}")
-# col_sentence.text(stmt1.subs({f"{k}": proposition[k] for k in stmt1.atoms()}))
-# st.write({f"{k}": proposition[k] for k in stmt1.atoms()})
-
-
-st.title("Dynamic Selectbox Letter Chooser")
+st.write("### Choose symbols")
 # Initialize session state for selectboxes and available options if not exists
 if "selectboxes" not in st.session_state:
     st.session_state.selectboxes = []
-    selected_letters = [
+    selected_symbols = [
         st.session_state[f"select_{i}"]
         for i in range(len(st.session_state.selectboxes))
     ]
 
 if "available_options" not in st.session_state:
-    st.session_state.available_options = set(all_symbols) - set(selected_letters)
+    st.session_state.available_options = set(all_symbols) - set(selected_symbols)
 
 
 # Function to add a new selectbox
 def add_selectbox():
     if len(st.session_state.selectboxes) < len(all_symbols):
-        st.session_state.available_options = set(all_symbols) - set(selected_letters)
+        st.session_state.available_options = set(all_symbols) - set(selected_symbols)
         st.session_state.selectboxes.append(tuple(st.session_state.available_options))
 
 
@@ -77,13 +53,52 @@ with col1:
     st.button("Add Selectbox", on_click=add_selectbox)
 with col2:
     st.button("Remove Selectbox", on_click=remove_selectbox)
-# Display selectboxes
-for i, options in enumerate(st.session_state.selectboxes):
-    selected = st.selectbox(f"Select letter {i+1}", sorted(options), key=f"select_{i}")
 
-# Submit button and display selected letters
-selected_letters = [
+# Display selectboxes
+col_symbol, col_sentence, col_check = st.columns(
+    [1, 6, 1], gap="small", vertical_alignment="top"
+)
+for i, options in enumerate(st.session_state.selectboxes):
+    selected = col_symbol.selectbox(
+        f"Select Symbol {i+1}", sorted(options), key=f"select_{i}"
+    )
+    sentence = col_sentence.text_input(label=f"Sencence {i+1}", key=f"input_{i}")
+
+    try:
+        check_truth = col_check.selectbox(
+        f"check {selected}", ["True", "False"], key=f"check_{selected}"
+    )
+    except :
+        pass
+
+# Submit button check if all selected sympbols are unique
+selected_symbols = [
     st.session_state[f"select_{i}"] for i in range(len(st.session_state.selectboxes))
 ]
-if st.button("Submit"):
-    st.success(f"You selected: {', '.join(selected_letters)}")
+validites = {
+    str(symbol): st.session_state[f"check_{symbol}"] for symbol in selected_symbols
+}
+
+# get non unique symbols in selected_symbols
+if col_symbol.button("CHECK SYMPBOLS"):
+    if len(set(selected_symbols)) < len(selected_symbols):
+        col_sentence.error("You can't select same symbols twice!")
+    else:
+        col_sentence.success(f"You selected: {', '.join(selected_symbols)}")
+
+logical_statement = st.text_area(
+    "Write logical Statement",
+    help="use '>>' for 'implies', '&' for 'and', '|' for 'or', '~' for 'not'",
+)
+if st.button("SOLVE"):
+    col_sentence, col_result, _ = st.columns(
+        [2, 1, 4], gap="small", vertical_alignment="top"
+    )
+    for statement in logical_statement.split("\n"):
+        # st.latex(sp.sympify(statement).atoms())
+        symp_statement = sp.sympify(statement)
+        symp_result = symp_statement.subs(
+            {f"{k}": validites[f"{k}"] for k in symp_statement.atoms()}
+        )
+        col_sentence.latex(sp.latex(symp_statement))
+        col_result.latex(symp_result)
