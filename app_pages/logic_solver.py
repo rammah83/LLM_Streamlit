@@ -12,7 +12,7 @@ import streamlit as st  # type: ignore
 
 
 # Define symbolic variables
-sp_symbols = sp.symbols("A B C D")
+sp_symbols = sp.symbols("P B A W C G")
 # P, B, A, W, E, G = sp.symbols('P B A W E G')
 all_symbols = [str(symbol) for symbol in sp_symbols]
 
