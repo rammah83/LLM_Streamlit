@@ -1,8 +1,8 @@
 from operator import index
 from unittest import result
+from regex import P
 import sympy as sp
-import sympy.logic as logic
-from sympy.logic.boolalg import And, Or, Not, Implies, Equivalent, to_cnf
+from sympy.logic.boolalg import simplify_logic
 from sympy.logic.inference import satisfiable, valid, PropKB
 
 # from string import ascii_lowercase
@@ -92,7 +92,8 @@ if len(st.session_state.selectboxes) >= 1:
     )
     st.write("---")
     if st.button("SOLVE"):
-        col_sentence, col_result, _ = st.columns(
+        l:PropKB = PropKB()
+        col_sentence, col_result, col_inference = st.columns(
             [2, 1, 4], gap="small", vertical_alignment="top"
         )
         for statement in logical_statement.split("\n"):
@@ -103,3 +104,12 @@ if len(st.session_state.selectboxes) >= 1:
             )
             col_sentence.latex(sp.latex(symp_statement))
             col_result.latex(symp_result)
+            
+            simple_statement = simplify_logic(symp_statement, force=True , deep=True)
+            satisfiable_result = satisfiable(symp_statement)
+            col_inference.latex(satisfiable_result)
+            l.tell(simple_statement)
+
+        st.write("---")
+        st.write(l.ask(l.clauses[-1]))
+            

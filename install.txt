@@ -1,1 +1,2 @@
 pip install gradio-client aiohttp huggingface_hub[inference] PyPDF2 requests
+pip install -U z3-solver sympy streamlit
