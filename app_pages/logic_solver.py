@@ -1,18 +1,15 @@
-from operator import index
-from unittest import result
-from regex import P
 import sympy as sp
 from sympy.logic.boolalg import simplify_logic, to_cnf
-from sympy.logic.inference import satisfiable, valid, PropKB
+from sympy.logic.inference import satisfiable, valid, PropKB, entails
 
 # from string import ascii_lowercase
-import streamlit as st  # type: ignore
+import streamlit as st
 
 # st.subheader("Logic :blue[cool] :sunglasses:")
 
 
 # Define symbolic variables
-sp_symbols = sp.symbols("P B A W C G")
+sp_symbols = sp.symbols("P Q R A B C D E G H")
 # P, B, A, W, E, G = sp.symbols('P B A W E G')
 all_symbols = [str(symbol) for symbol in sp_symbols]
 
@@ -90,7 +87,9 @@ if len(st.session_state.selectboxes) >= 1:
         "Write logical Statement",
         help="use '>>' for 'implies', '&' for 'and', '|' for 'or', '~' for 'not'",
     )
+    
     st.write("---")
+    symbol_to_entail = st.selectbox(label="Entails", options=selected_symbols)
     if st.button("SOLVE"):
         kb:PropKB = PropKB()
         col_sentence, col_result, col_validity = st.columns(
@@ -115,10 +114,41 @@ if len(st.session_state.selectboxes) >= 1:
                     with col_validity.popover("Valid in some possibilities", use_container_width=True):
                         for model in satisfiable(symp_statement, all_models=True):
                             st.latex(model if model else "Impossible")
+                            # st.latex(satisfiable(symp_statement, all_models=False))
                 else:
                     col_validity.error("Invalid in all possibilities")
-            # l.tell(simple_statement)
+            kb.tell(symp_statement)
+        
+        # buil and stantment between logical_statement
+        global_statement = sp.sympify(" & ".join(["(" + str(symp_statement) + ")" for symp_statement in logical_statement.split("\n")]))
+        col_sentence.write('---')
+        col_sentence.latex(sp.latex(global_statement))
+        col_result.write('---')
+        global_symp_result = global_statement.subs(
+                {f"{k}": validites[f"{k}"] for k in global_statement.atoms()}
+            )
+        col_result.latex(global_symp_result)
+        col_validity.write('---')
+        if valid(global_statement):
+            col_validity.success("Valid in all possibilities")
+        else:
+            models_for_global = satisfiable(global_statement, all_models=True)
+            if all(models_for_global):
+                with col_validity.popover("Valid in some possibilities", use_container_width=True):
+                    for model in satisfiable(global_statement, all_models=True):
+                        st.latex(model if model else "Impossible")
+                        # st.latex(satisfiable(symp_statement, all_models=False))
+            else:
+                col_validity.error("Invalid in all possibilities")
+        
+            
+
 
         st.write("---")
-        # st.write(l.ask(l.clauses[-1]))
+        col_kb, col_entails, col_result = st.columns(3, gap="small", vertical_alignment="center")
+        col_entails.write(f"### Knowledge Base being TRUE entails {symbol_to_entail} is ")
+        col_kb.dataframe({"Knowledge Base":kb.clauses}, hide_index=True)
+        col_result.latex(kb.ask(symbol_to_entail))
+        col_result.latex(entails(symbol_to_entail, kb.clauses))
+
             
