@@ -79,15 +79,19 @@ if len(st.session_state.selectboxes) >= 1:
             col_sentence.error("You can't select same symbols twice!")
         else:
             col_sentence.success(f"You selected: {', '.join(selected_symbols)}")
-    logical_statement = st.text_area(
-        "Write logical Statement",
+    col_kb, col_entails, _ = st.columns(
+        [2,1,3], gap="small", vertical_alignment="bottom"
+    )
+    logical_statement = col_kb.text_area(
+        "*Knwoledge Base (KB) _Logical Statement_*",
         help="use '>>' for 'implies', '&' for 'and', '|' for 'or', '~' for 'not'",
     )
 
-    st.write("---")
-    symbol_to_entail = st.selectbox(label="Entails", options=selected_symbols)
+    symbol_to_entail = col_entails.selectbox(label="Entails", options=selected_symbols)
     if st.button("SOLVE"):
-        col_sentence, col_result, col_validity = st.columns(
+        container = st.container()
+        expender = st.expander("## Details")
+        col_sentence, col_result, col_validity = expender.columns(
             [2, 1, 1], gap="small", vertical_alignment="top"
         )
         col_sentence.write("_Statement:_")
@@ -103,18 +107,18 @@ if len(st.session_state.selectboxes) >= 1:
             )
             col_result.latex(symp_result)
             if valid(symp_statement):
-                col_validity.success("Valid in all possibilities")
+                col_validity.success("Valid in all worlds")
             else:
                 models = satisfiable(symp_statement, all_models=True)
                 if all(models):
                     with col_validity.popover(
-                        "Valid in some possibilities", use_container_width=True
+                        "Valid in some worlds", use_container_width=True
                     ):
                         for model in satisfiable(symp_statement, all_models=True):
                             st.latex(model if model else "Impossible")
                             # st.latex(satisfiable(symp_statement, all_models=False))
                 else:
-                    col_validity.error("Invalid in all possibilities")
+                    col_validity.error("Invalid in all worlds")
             kb.tell(symp_statement)
 
         # buil and stantment between logical_statement
@@ -149,7 +153,7 @@ if len(st.session_state.selectboxes) >= 1:
                 col_validity.error("Invalid in all possibilities")
 
         st.write("---")
-        col_kb, col_entails, col_result = st.columns(
+        col_kb, col_entails, col_result = container.columns(
             3, gap="small", vertical_alignment="center"
         )
         col_entails.write(
