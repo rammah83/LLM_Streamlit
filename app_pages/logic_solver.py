@@ -107,18 +107,18 @@ if len(st.session_state.selectboxes) >= 1:
             )
             col_result.latex(symp_result)
             if valid(symp_statement):
-                col_validity.success("Valid in all worlds")
+                col_validity.success("Valid in all Worlds")
             else:
                 models = satisfiable(symp_statement, all_models=True)
                 if all(models):
                     with col_validity.popover(
-                        "Valid in some worlds", use_container_width=True
+                        "Valid in some Worlds", use_container_width=True
                     ):
                         for model in satisfiable(symp_statement, all_models=True):
                             st.latex(model if model else "Impossible")
                             # st.latex(satisfiable(symp_statement, all_models=False))
                 else:
-                    col_validity.error("Invalid in all worlds")
+                    col_validity.error("Invalid in all Worlds")
             kb.tell(symp_statement)
 
         # buil and stantment between logical_statement
@@ -139,7 +139,7 @@ if len(st.session_state.selectboxes) >= 1:
         col_result.latex(global_symp_result)
         col_validity.write("---")
         if valid(global_statement):
-            col_validity.success("Valid in all possibilities")
+            col_validity.success("Valid in all Worlds")
         else:
             models_for_global = satisfiable(global_statement, all_models=True)
             if all(models_for_global):
@@ -150,7 +150,7 @@ if len(st.session_state.selectboxes) >= 1:
                         st.latex(model if model else "Impossible")
                         # st.latex(satisfiable(symp_statement, all_models=False))
             else:
-                col_validity.error("Invalid in all possibilities")
+                col_validity.error("Invalid in all Worlds")
 
         st.write("---")
         col_kb, col_entails, col_result = container.columns(
