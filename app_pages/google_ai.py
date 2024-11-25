@@ -2,7 +2,7 @@
 import google.generativeai as genai
 import streamlit as st
 
-genai.configure(api_key="AIzaSyB279brH54LJ97kqJE5N0RSxsX-_YSY6uQ")
+genai.configure(api_key="")
 
 def get_google_ai_response(prompt="Write a story about a magic backpack.", model_id="gemini-1.5-flash"):
     model = genai.GenerativeModel(model_id)
