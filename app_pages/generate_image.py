@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 
 st.title("Generate, Inpaint, and Outpaint Image with Flux Model")
-st.sidebar.header("Settings")
+st.sidebar.header("Parameters")
 
 text_prompt = st.text_area("Enter a text prompt to generate an image:")
 
