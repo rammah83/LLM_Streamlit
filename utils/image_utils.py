@@ -11,7 +11,17 @@ from PIL import Image
 API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
 headers = {"Authorization": f"Bearer {st.secrets['huggingface_api_key']}"}
 
-def query(payload):
+def query_requests(payload):
+    """
+    Sends a POST request to the specified API URL with the given payload.
+
+    Args:
+        payload (dict): The JSON payload to be sent in the POST request.
+
+    Returns:
+        bytes: The content of the response if the request is successful.
+        None: If the request fails, logs an error message and returns None.
+    """
     response = requests.post(API_URL, headers=headers, json=payload)
     if response.status_code == 200:
         return response.content
@@ -19,64 +29,59 @@ def query(payload):
         st.error("Error: " + response.text)
         return None
 
-def query_inference_client(text_prompt, num_inference_steps, guidance_scale, seed_number):
-    client = InferenceClient(model="black-forest-labs/FLUX.1-dev",
-                            token=st.secrets["huggingface_api_key"])
-    return client.text_to_image(
+def query_inference_text2img(
+    text_prompt: str,
+    num_inference_steps: int,
+    guidance_scale: float,
+    seed_number: int,
+    size: tuple[int, int] = (512, 512)
+) -> Image.Image:
+    """
+    Generates an image from a text prompt using the specified inference client.
+
+    Args:
+        text_prompt (str): The text input for which an image will be generated.
+        num_inference_steps (int): The number of inference steps to be used in generating the image.
+        guidance_scale (float): The guidance scale to influence the image generation process.
+        seed_number (int): The seed number for randomization in image generation.
+        size (tuple[int, int], optional): The size of the generated image. Defaults to (512, 512).
+
+    Returns:
+        Image.Image: The generated image based on the provided text prompt and parameters.
+    """
+    client = InferenceClient(
+        model="black-forest-labs/FLUX.1-dev",
+        token=st.secrets["huggingface_api_key"],
+    )
+    image_bytes = client.text_to_image(
         prompt=text_prompt,
         num_inference_steps=num_inference_steps,
         guidance_scale=guidance_scale,
         seed=seed_number,
-        width=512,
-        height=512,
-        )
+        width=size[0],
+        height=size[1],
+    )
+    return image_bytes
 
-def generate_image(text_prompt, num_inference_steps, guidance_scale, seed_number):
-    start_time = time.time()
-    with st.spinner("Generating image, please wait..."):
-        # result = query({
-        #     "inputs": text_prompt,
-        #     "parameters": {
-        #         "num_inference_steps": num_inference_steps,
-        #         "guidance_scale": guidance_scale,
-        #         "seed": seed_number,
-        #     }
-        # })
-        result = query_inference_client(text_prompt, num_inference_steps, guidance_scale, seed_number)
-        if result:
-            st.image(result, caption="Generated Image", use_container_width=False)
-            with st.popover("### Parameters Used"):
-                st.write(f"- Number of Inference Steps: {num_inference_steps}")
-                st.write(f"- Guidance Scale: {guidance_scale}")
-                st.write(f"- Seed Number: {seed_number}")
-                st.write(f"Time Taken in seconds: {time.time() - start_time}")
-
-def inpaint_outpaint_image(uploaded_image, mask_prompt, num_inference_steps, guidance_scale, seed_number):
-    st.write("### Inpainting/Outpainting")
-    image = Image.open(uploaded_image)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-    
-    with st.spinner("Applying inpainting/outpainting, please wait..."):
-        image_bytes = BytesIO()
-        image.save(image_bytes, format='PNG')
-        image_bytes = image_bytes.getvalue()
-        
-        result = query({
-            "inputs": {
-                "image": image_bytes,
-                "mask_description": mask_prompt
-            },
-            "parameters": {
-                "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale,
-                "seed": seed_number
-            }
-        })
-        if result:
-            st.image(result, caption="Inpainted/Outpainted Image", use_column_width=True)
-            st.download_button(
-                label="Download Inpainted/Outpainted Image",
-                data=BytesIO(result),
-                file_name="inpainted_outpainted_image.png",
-                mime="image/png"
-            )
+def query_inference_img2img(
+    uploaded_image: Image.Image,
+    text_prompt: str,
+    num_inference_steps: int,
+    guidance_scale: float,
+    seed_number: int,
+    size: tuple[int, int] = (512, 512)
+) -> Image.Image:
+    client = InferenceClient(
+        model="black-forest-labs/FLUX.1-dev",
+        token=st.secrets["huggingface_api_key"],
+    )
+    image_bytes = client.image_to_image(
+        image=uploaded_image,
+        prompt=text_prompt,
+        num_inference_steps=num_inference_steps,
+        guidance_scale=guidance_scale,
+        seed=seed_number,
+        width=size[0],
+        height=size[1],
+    )
+    return image_bytes
